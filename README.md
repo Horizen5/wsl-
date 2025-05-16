@@ -15,7 +15,7 @@
 
 ---
 
-## Ὅd 使用方法
+## 使用方法
 
 ### 1. 下载并执行脚本
 
@@ -78,7 +78,7 @@ sudo bash -c 'echo nameserver 8.8.8.8 > /etc/resolv.conf'
 
 ---
 
-## ὐe 工具效果验证
+## 工具效果验证
 
 ```bash
 docker run --rm alpine ping -c 3 google.com
