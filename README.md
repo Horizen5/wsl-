@@ -1,111 +1,86 @@
-# WSL + Docker 网络修复工具说明文档
+# WSL & Docker 网络检测与自动修复工具
 
-本项目提供一个增强版自动修复脚本，用于诊断并修复 WSL (Windows Subsystem for Linux) 与 Docker 网络连接异常问题。
+该项目包含两个工具脚本：
 
----
-
-## ✨ 功能特性
-
-* ✅ 自动检测并配置 WSL 环境下的代理环境变量
-* ✅ 修复 Docker 无法联网、拉取镜像失败等问题
-* ✅ 设置 systemd 中 Docker 的代理配置（支持 Clash/Socks5）
-* ✅ 自动重载 systemd 并重启 Docker 服务
-* ✅ 设置 DNS 避免解析失败
-* ✅ 可选集成为 shell 命令（`.bashrc` / `.zshrc`）
+* 【wsl\_docker\_check.sh】WSL & Docker 网络系统综合检测
+* 【wsl\_docker\_fix.sh】根据检测结果自动修复常见问题
 
 ---
 
-## 使用方法
+## 一、工具使用
 
-### 1. 下载并执行脚本
+### 1. 先下载项目
 
 ```bash
-wget -O fix_wsl_docker.sh https://raw.githubusercontent.com/<yourname>/<repo>/main/fix_wsl_docker.sh
-chmod +x fix_wsl_docker.sh
-./fix_wsl_docker.sh
+git clone https://github.com/Horizen5/wsl-network.git
+cd wsl-network
 ```
 
-### 2. 自动集成到 shell (可选)
-
-脚本会将代理变量自动追加到你的 `~/.bashrc` 或 `~/.zshrc` 中：
+### 2. 运行网络检测脚本
 
 ```bash
-export http_proxy="http://127.0.0.1:7897"
-export https_proxy="http://127.0.0.1:7897"
-export all_proxy="socks5://127.0.0.1:7897"
+chmod +x wsl_docker_check.sh
+./wsl_docker_check.sh
 ```
 
-重新加载配置文件以立即生效：
+### 3. 根据结果进行修复
 
 ```bash
-source ~/.bashrc   # 或 source ~/.zshrc
+chmod +x wsl_docker_fix.sh
+sudo ./wsl_docker_fix.sh
 ```
 
 ---
 
-## ⚖️ 脚本内容概览
+## 二、wsl\_docker\_check.sh
+
+该脚本检查内容包括：
+
+* WSL 网络 IP & 默认网关
+* ping 测试 (8.8.8.8 / google.com)
+* curl 测试 https
+* Docker 状态 & 镜像拉取
+* Docker 内容器网络连接
+* Docker 代理配置 proxy.conf
+* /etc/docker/daemon.json DNS 配置
+* Clash 本地端口监听 (7890/7897)
+
+---
+
+## 三、wsl\_docker\_fix.sh
+
+支持一键修复下列常见问题：
+
+* 修复 /etc/resolv.conf DNS 配置
+* 修复 /etc/docker/daemon.json DNS 配置
+* 检测并调整 Docker 代理 proxy.conf
+* 重启 docker.service 和 networking
+* 检测是否 Clash 本地正确启动
+
+使用时需 root 权限：
 
 ```bash
-#!/bin/bash
-
-PROXY_PORT=7897
-
-# 设置 shell 代理环境变量
-export http_proxy="http://127.0.0.1:$PROXY_PORT"
-export https_proxy="http://127.0.0.1:$PROXY_PORT"
-export all_proxy="socks5://127.0.0.1:$PROXY_PORT"
-
-# 写入到 shell 配置文件
-...
-
-# 配置 Docker 代理
-sudo tee /etc/systemd/system/docker.service.d/proxy.conf > /dev/null <<EOF
-[Service]
-Environment="HTTP_PROXY=http://127.0.0.1:$PROXY_PORT"
-Environment="HTTPS_PROXY=http://127.0.0.1:$PROXY_PORT"
-Environment="ALL_PROXY=socks5://127.0.0.1:$PROXY_PORT"
-Environment="NO_PROXY=localhost,127.0.0.1,::1"
-EOF
-
-# 重启 Docker
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-
-# 修复 DNS
-sudo bash -c 'echo nameserver 8.8.8.8 > /etc/resolv.conf'
+sudo ./wsl_docker_fix.sh
 ```
 
 ---
 
-## 工具效果验证
+## 四、集成自动检测
+
+如需每次打开终端自动检测，可集成到 `.bashrc`：
 
 ```bash
-docker run --rm alpine ping -c 3 google.com
+echo "bash ~/wsl-network/wsl_docker_check.sh" >> ~/.bashrc
 ```
 
-> 如有返回 100% packet loss，请确保 clash/sing-box 正常运行并打开 7897 端口。
+---
 
-```bash
-docker run --rm alpine ping -c 3 8.8.8.8
-```
+## 五、故障处理提示
 
-> 如能 ping 通 IP 而不能进行域名解析，请确保 `/etc/resolv.conf` DNS 设置正确
+* 如果 Docker 内 ping IP 正常、DNS ping 失败，应为 DNS 配置错误
+* 如果 Clash 未启动，且 Docker 代理指向为 127.0.0.1:7897，则会断网
+* 如需系统级修复，请使用系统管理员权限
 
 ---
 
-## ✨ 本项目未来计划
-
-* [ ] 支持 Clash Meta/Sing-box 自动检测
-* [ ] 支持 WSL DNS Stub Listener 自动关闭
-* [ ] 支持 GUI/命令行弹窗工具
-
----
-
-## ✉️ 联系我
-
-若你有任何问题或建议，欢迎 PR / Issue 或进一步联系我。
-
----
-
-感谢使用！如有必要，我可以为你为此脚本生成 GitHub Repo 或 Gist 链接。
+欢迎提 issue / PR 优化脚本功能。
